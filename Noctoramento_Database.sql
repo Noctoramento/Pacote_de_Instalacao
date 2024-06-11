@@ -1,7 +1,3 @@
-CREATE DATABASE Noctoramento;
-USE Noctoramento;
-
--- DROP DATABASE Noctoramento;
 
 CREATE TABLE Empresa (
     idEmpresa INT PRIMARY KEY AUTO_INCREMENT,
@@ -10,11 +6,6 @@ CREATE TABLE Empresa (
     email VARCHAR(45),
     senha VARCHAR(45)
 );
-
--- SELECT * FROM Empresa;
-
--- INSERT INTO Empresa (razaoSocial, cnpjEmpresa, email, senha) VALUES 
--- ('Noctoramento', '12345678000195', 'contato@noctoramento.com', 'urubu100');
 
 CREATE TABLE Cargo (
     idCargo INT PRIMARY KEY AUTO_INCREMENT,

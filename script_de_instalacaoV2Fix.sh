@@ -88,9 +88,9 @@ config_docker() {
 
 #Função para iniciar o Jar
 init_jar() {
-	echo "$(tput setaf 5)[Noctoramento Helper]:$(tput setaf 7) Tudo pronto, deseja iniciar a aplicação?"
+	echo "$(tput setaf 5)[Noctoramento Helper]:$(tput setaf 7) Tudo pronto, deseja iniciar a aplicação? ('s' ou 'n')"
 	read get
-	if [ \"$get\" == \"S\" ];then
+	if [ \"$get\" == \"s\" ];then
 		echo "$(tput setaf 5)[Noctoramento Helper]:$(tput setaf 7) Instalação concluída, iniciando aplicação, aguarde um instante..."
 		sudo ./noctoramento
 	else
@@ -100,15 +100,7 @@ init_jar() {
 
 ass_noctoramento
 prep_ambiente
-if [ $(check_java) == 0 ];then
-	install_java
-else
-	if [ $(check_docker) == 0 ];then
-		install_docker
-	else
-		if [ $(config_docker) == 0 ];then
-		init_jar
-		ass_noctoramento
-		fi
-	fi
-fi
+install_java
+install_docker
+config_docker
+init_jar
