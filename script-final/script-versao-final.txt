@@ -1,0 +1,159 @@
+#!/bin/bash
+
+VERSAO=17
+
+# Helper function for displaying messages
+echo_message() {
+    echo "$1"
+}
+
+clear
+echo_message "Olá Cliente, serei seu assistente para instalação do Java!"
+
+echo_message "Verificando aqui se você possui o Java instalado..."
+sleep 2
+
+java -version
+if [ $? -eq 0 ]; then
+    echo_message "Você já tem o Java instalado!!!"
+else
+    echo_message "Opa! Não identifiquei nenhuma versão do Java instalado, mas sem problemas, irei resolver isso agora!"
+    echo_message "Confirme para mim se realmente deseja instalar o Java (S/N)?"
+    read inst
+    if [ "$inst" == "S" ]; then
+        echo_message "Ok! Você escolheu instalar o Java ;D"
+        echo_message "Adicionando o repositório!"
+        sudo add-apt-repository ppa:linuxuprising/java -y
+        clear
+       
+        if [ $VERSAO -eq 17 ]; then
+            echo_message "Preparando para instalar a versão 17 do Java. Confirme a instalação quando solicitado ;D"
+            sudo apt install -y openjdk-17-jdk
+            clear
+            echo_message "Java instalado com sucesso!"
+        fi
+    else
+        echo_message "Você optou por não instalar o Java por enquanto, até a próxima então!"
+        exit 0
+    fi
+fi
+
+# Verificar se o Docker está instalado
+if ! [ -x "$(command -v docker)" ]; then
+    echo_message "Docker não está instalado. Instalando Docker..."
+    sudo apt-get update
+    sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    sudo apt-get update
+    sudo apt-get install -y docker-ce
+fi
+
+# Verificar se o Docker Compose está instalado
+if ! [ -x "$(command -v docker-compose)" ]; then
+    echo_message "Docker Compose não está instalado. Instalando Docker Compose..."
+    sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    clear
+fi
+
+# Verificar se o Maven está instalado
+if ! [ -x "$(command -v mvn)" ]; then
+    echo_message "Maven não está instalado. Instalando Maven..."
+    sudo apt-get install -y maven
+    clear
+fi
+
+# Criar diretório para yml
+mkdir -p dockerCompose
+
+# Ir para o diretório
+cd dockerCompose
+
+# Clone GitHub repository
+echo_message "Clonando o repositório do GitHub..."
+git clone "https://github.com/florencionath/noctoramento2"
+clear
+
+#entrar no arquivo
+cd noctoramento2
+
+# Construir o projeto usando Maven
+echo_message "Construindo o projeto Maven..."
+cd noctoramento
+mvn clean install
+clear
+
+# Verificar se o JAR foi criado corretamente
+if [ ! -f "target/noctoramento-1.0-SNAPSHOT-jar-with-dependencies.jar" ]; then
+    echo_message "Erro: O arquivo JAR não foi encontrado após a construção do Maven."
+    exit 1
+fi
+
+# Voltar para o diretório dockerCompose
+cd ..
+
+cd ..
+
+# Create docker-compose.yml file
+echo_message "Criando o arquivo docker-compose.yml..."
+cat <<EOL > docker-compose.yml
+version: '3.3'
+services:
+  mysql:
+    container_name: containerNoctoramento
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: urubu100
+      MYSQL_DATABASE: Noctoramento
+    volumes:
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+EOL
+
+# Create init-scripts directory e mover para init.sql file
+echo_message "Criando o diretório init-scripts e movendo o arquivo init.sql..."
+mkdir -p init-scripts
+cp noctoramento2/noctoramento/init.sql init-scripts/
+
+# Start Docker
+echo_message "Iniciando o Docker ..."
+sudo systemctl start docker
+
+# Start Docker Compose
+echo_message "Iniciando o Docker Compose..."
+sudo docker-compose up -d
+
+# Adicionar um sleep para dar tempo ao Docker Compose de iniciar os containers
+echo_message "Aguardando os containers iniciarem..."
+sleep 10
+
+# Verificar se os containers estão em execução
+if [ "$(sudo docker inspect -f '{{.State.Running}}' containerNoctoramento)" == "true" ]; then
+    echo_message "Todos os containers estão em execução."
+else
+    echo_message "O container MySQL não está em execução. Verifique os logs para mais detalhes."
+    sudo docker-compose logs
+    exit 1
+fi
+
+# Adicionar alias ao arquivo .bashrc
+bot_message "Adicionando alias para facilitar a execução do JAR..."
+echo "alias iniciar='cd ~/dockerCompose/noctoramento2/noctoramento/target && java -jar noctoramento-1.0-SNAPSHOT-jar-with-dependencies.jar'" >> ~/.bashrc
+source ~/.bashrc
+
+# Perguntar ao usuário se ele deseja executar o JAR
+echo_message "Deseja executar o arquivo JAR agora (S/N)?"
+read exec_jar
+
+if [ "$exec_jar" == "S" ]; then
+    echo_message "Executando o arquivo JAR..."
+    cd noctoramento2/noctoramento/target
+    java -jar noctoramento-1.0-SNAPSHOT-jar-with-dependencies.jar
+else
+    echo_message "Você optou por não executar o JAR agora. Até a próxima!"
+fi
+
+echo_message "Instalação concluída!"
